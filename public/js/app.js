@@ -67,13 +67,13 @@
             doAnimation();
         });
 
-        var doScrollAnimation = function() {
-            var amount = booksArea.height() - winHeight,
-                duration = amount * 20;
+        var amount = booksArea.height() - winHeight,
+            duration = amount * 20;
+        if (amount < 0) {
+            return;
+        }
 
-            if (amount < 0) {
-                return;
-            }
+        var doScrollAnimation = function() {
             scrollElement.animate({
                 scrollTop: amount
             }, {
