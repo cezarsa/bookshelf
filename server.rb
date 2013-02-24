@@ -4,10 +4,29 @@
   end
 end
 
-begin
-  $bookshelf_config = YAML.load_file('config.yml')
-rescue SyntaxError
-  puts <<-END
+class BookshelfConfig
+
+  def initialize
+    begin
+      @config = YAML.load_file('config.yml')
+    rescue SyntaxError
+      @config = {}
+    end
+    @config['amazon'] ||= {}
+    @config['amazon'].merge!({
+      'secret' => ENV['AMAZON_SECRET'],
+      'key' => ENV['AMAZON_KEY'],
+      'email' => ENV['AMAZON_EMAIL'],
+      'password' => ENV['AMAZON_PASSWORD']
+    }) { |k, v1, v2| v2 ? v2 : v1 }
+
+    if @config['amazon'].any? { |k, v| v.nil? }
+      error!
+    end
+  end
+
+  def error!
+    puts <<-END
 You have to create a config.yml file with:
 
 amazon:
@@ -16,9 +35,16 @@ amazon:
   email: <your email>
   password: <your password>
 
-  END
-  exit -1
+    END
+    exit -1
+  end
+
+  def method_missing(method_id, *args)
+    method_id.to_s.split('_').inject(@config) { |acc, p| acc[p] }
+  end
 end
+
+$bookshelf_config = BookshelfConfig.new
 
 class BookShelf < Sinatra::Base
 
@@ -26,8 +52,8 @@ class BookShelf < Sinatra::Base
     register Sinatra::StaticAssets
 
     ASIN::Configuration.configure do |config|
-      config.secret        = $bookshelf_config['amazon']['secret']
-      config.key           = $bookshelf_config['amazon']['key']
+      config.secret        = $bookshelf_config.amazon_secret
+      config.key           = $bookshelf_config.amazon_key
       config.associate_tag = 'something'
     end
   end
@@ -39,7 +65,7 @@ class BookShelf < Sinatra::Base
 
 
   get "/" do
-    @books = Books.new($bookshelf_config['amazon']['email'], $bookshelf_config['amazon']['password']).all
+    @books = Books.new($bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
     @books.delete_if { |b| b.order_data['title'][/dictionary/i] }
     @books.sort_by! { |b| [b.author_last_name, b.title] }
 
