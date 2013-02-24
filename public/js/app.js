@@ -1,15 +1,18 @@
 (function($) {
 
+    var scrollElement = $('html, body'),
+        booksArea = $('.books'),
+        items = booksArea.find('> div');
+
     var update = function() {
         var width = $(window).width(),
-            booksArea = $('.books'),
-            items = booksArea.find('> div'),
             toBreak = [],
             acc = 0,
             lastBreak = 0;
 
         booksArea.width(width).find('br').remove();
         items.stop(true, false).css('margin-left', 0).removeClass('break');
+        scrollElement.stop(true, false).scrollTop(0);
 
         for (var i = 0, len = items.length; i < len; ++i) {
             var item = items.eq(i),
@@ -52,6 +55,25 @@
             };
             doAnimation();
         });
+
+        var doScrollAnimation = function() {
+            var amount = booksArea.height() - $(window).height(),
+                duration = amount * 20;
+            scrollElement.animate({
+                scrollTop: amount
+            }, {
+                easing: 'linear',
+                duration: duration,
+                complete: function() {
+                    scrollElement.animate({ scrollTop: 0 }, {
+                        easing: 'linear',
+                        duration: duration,
+                        complete: setTimeout(doScrollAnimation, 0)
+                    })
+                }
+            });
+        }
+        doScrollAnimation();
 
     };
 
