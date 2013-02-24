@@ -12,6 +12,9 @@ html {
 .books > div {
     display: inline-block;
     vertical-align: top;
+
+    *display: inline;
+    *zoom: 1;
 }
 
 .books .title, .books .author {
