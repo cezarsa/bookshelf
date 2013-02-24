@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BookShelf</title>
+    <%= stylesheet_link_tag "/css/reset.css" %>
+    <%= stylesheet_link_tag "/css/app.css" %>
+</head>
+<body>
+
+<div class="books">
+<% @books.each do |book| %>
+    
+    <div>
+        <img src="<%= book.image %>">
+        <div class="title"><%= book.title %></div>
+        <div class="author"><%= book.author %></div>
+    </div>
+
+<% end %>
+</div>
+
+<%= javascript_tag "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" %>
+<%= javascript_tag "/js/jquery.imagesloaded.js" %>
+<%= javascript_tag "/js/app.js" %>
+</body>
+</html>

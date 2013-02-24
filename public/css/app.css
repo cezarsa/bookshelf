@@ -1,0 +1,28 @@
+
+html {
+    background: #222;
+}
+
+.books {
+    font-size: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.books > div {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.books .title, .books .author {
+    font-size: 12px;
+    display: none;
+}
+
+.books .title {
+    font-weight: bold;
+}
+
+.books img {
+    height: 400px;
+}

@@ -1,0 +1,7 @@
+*-books.json
+*.swp
+*~
+.DS_Store
+.bundle
+.sass-cache/
+config.yml
