@@ -54,6 +54,7 @@ class Books
       order_data['title'] = CGI.unescapeHTML(order_data['title'])
       book_data = books_data[order_data['asin']]
       error_count = 5
+      sleep_on_error = 0.2
 
       unless book_data
         begin
@@ -67,7 +68,8 @@ class Books
             book_data = nil
           end
         rescue
-          sleep 0.5
+          sleep(sleep_on_error)
+          sleep_on_error *= 2
           error_count -= 1
           raise if error_count == 0
           retry
