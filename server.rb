@@ -10,8 +10,9 @@ class BookshelfConfig
     begin
       @config = YAML.load_file('config.yml')
     rescue SyntaxError
-      @config = {}
+    rescue
     end
+    @config ||= {}
     @config['amazon'] ||= {}
     @config['amazon'].merge!({
       'secret' => ENV['AMAZON_SECRET'],
