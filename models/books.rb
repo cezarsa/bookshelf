@@ -54,7 +54,7 @@ class Books
       order_data['title'] = CGI.unescapeHTML(order_data['title'])
       book_data = books_data[order_data['asin']]
       error_count = 5
-      sleep_on_error = 0.2
+      sleep_on_error = 0.5
 
       unless book_data
         begin

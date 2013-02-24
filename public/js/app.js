@@ -2,10 +2,21 @@
 
     var scrollElement = $('html, body'),
         booksArea = $('.books'),
-        items = booksArea.find('> div');
+        items = booksArea.find('> div'),
+        $window = $(window);
 
-    var update = function() {
-        var width = $(window).width(),
+    var oldWidth = null, oldHeight = null;
+    var update = function(opts) {
+        var winWidth = $window.width(),
+            winHeight = $window.height();
+
+        if (oldWidth === winWidth && oldHeight === winHeight) {
+            return;
+        }
+        oldWidth = winWidth;
+        oldHeight = winHeight;
+
+        var width = winWidth,
             toBreak = [],
             acc = 0,
             lastBreak = 0;
@@ -57,8 +68,12 @@
         });
 
         var doScrollAnimation = function() {
-            var amount = booksArea.height() - $(window).height(),
+            var amount = booksArea.height() - winHeight,
                 duration = amount * 20;
+
+            if (amount < 0) {
+                return;
+            }
             scrollElement.animate({
                 scrollTop: amount
             }, {
@@ -69,7 +84,7 @@
                         easing: 'linear',
                         duration: duration,
                         complete: setTimeout(doScrollAnimation, 0)
-                    })
+                    });
                 }
             });
         }
@@ -77,6 +92,6 @@
 
     };
 
-    $(window).resize(update);
-    $('.books').imagesLoaded(update);
+    $window.resize(update);
+    booksArea.imagesLoaded(update);
 }(jQuery));
