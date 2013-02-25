@@ -64,12 +64,32 @@ class BookShelf < Sinatra::Base
     also_reload './models/*'
   end
 
+  def filter_books(books)
+    books.delete_if { |b| b.order_data['title'][/dictionary/i] }
+    books.sort_by! { |b| [b.author_last_name, b.title] }
+  end
 
-  get "/" do
-    @books = Books.new($bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
-    @books.delete_if { |b| b.order_data['title'][/dictionary/i] }
-    @books.sort_by! { |b| [b.author_last_name, b.title] }
+  get "/:email/:password" do |email, password|
+    @books = Books.new(email, password).all
+    filter_books(@books)
 
     erb :index
   end
+
+  get "/:email" do |email|
+    return '' if email == 'favicon.ico'
+
+    @books = Books.new(email, nil).all
+    filter_books(@books)
+
+    erb :index
+  end
+
+  get "/" do
+    @books = Books.new($bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
+    filter_books(@books)
+
+    erb :index
+  end
+
 end

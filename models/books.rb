@@ -10,10 +10,12 @@ class Books
     @email = email
     @password = password
 
+    require 'debugger'; debugger
     books = fetch_from_cache
     if books
       @books = books.map { |b| Book.from_cache(b) }
     else
+      raise "password required" if password.nil?
       @books = fetch_from_amazon
       update_cache(@books)
     end
@@ -127,7 +129,7 @@ class Book
 
   def author
     author = book_data['Author'] ? book_data['Author'] : book_data['ItemAttributes']['Author']
-    author || order_data['author'] || ''
+    author || order_data['author'].split(',').map(&:strip).reverse.join(' ') || ''
   end
 
   def title
