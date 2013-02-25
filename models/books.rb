@@ -10,7 +10,6 @@ class Books
     @email = email
     @password = password
 
-    require 'debugger'; debugger
     books = fetch_from_cache
     if books
       @books = books.map { |b| Book.from_cache(b) }
