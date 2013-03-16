@@ -41,43 +41,14 @@ class Books
     
     books = books_data['data']['items']
 
-    client = ASIN::Client.instance
-
-    all_results = []
-    books.each_slice(10) do |books_slice|
-      all_results += client.lookup(books_slice.map {|b| b['asin'] })
-    end
-    books_data = {}
-    all_results.each { |b| books_data[b.asin] = b }
+    books_extra_data = {}
 
     books.map do |order_data|
-      order_data['author'] = CGI.unescapeHTML(order_data['author'])
-      order_data['title'] = CGI.unescapeHTML(order_data['title'])
-      book_data = books_data[order_data['asin']]
-      error_count = 5
-      sleep_on_error = 0.5
+      book_data = books_extra_data[order_data['asin']]
 
-      unless book_data
-        begin
-          title = order_data['title'].match(/(.*?)(\(|$)/)[1].strip
-          book_data = client.search({:SearchIndex => :Books, :Author => order_data['author'], :Title => title, :ResponseGroup => :Medium})
-          if book_data.size > 0
-            book_data = book_data.min_by do |b|
-              Text::Levenshtein.distance(order_data['title'], b.title)
-            end
-          else
-            book_data = nil
-          end
-        rescue
-          sleep(sleep_on_error)
-          sleep_on_error *= 2
-          error_count -= 1
-          raise if error_count == 0
-          retry
-        end
-      end
-      
-      if book_data
+      if order_data['firstOrderDate'] == 0
+        puts order_data['title']
+      else
         Book.from_amazon(book_data, order_data)
       end
     end.compact
@@ -127,8 +98,13 @@ class Book
   end
 
   def author
-    author = book_data['Author'] ? book_data['Author'] : book_data['ItemAttributes']['Author']
-    author || order_data['author'].split(',').map(&:strip).reverse.join(' ') || ''
+    if book_data['Author']
+      book_data['Author']
+    elsif book_data['ItemAttributes'] && book_data['ItemAttributes']['Author']
+      book_data['ItemAttributes']['Author']
+    else
+      order_data['author'].split(',').map(&:strip).reverse.join(' ') || ''
+    end
   end
 
   def title

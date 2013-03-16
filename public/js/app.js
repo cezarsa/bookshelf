@@ -23,7 +23,6 @@
 
         booksArea.width(width).find('br').remove();
         items.stop(true, false).css('margin-left', 0).removeClass('break');
-        scrollElement.stop(true, false).scrollTop(0);
 
         for (var i = 0, len = items.length; i < len; ++i) {
             var item = items.eq(i),
@@ -49,7 +48,7 @@
 
         items.eq(0).add('> div.break', booksArea).each(function() {
             var el = $(this),
-                duration = Math.max(1000, 40 * parseInt(el.data('amount')));
+                duration = Math.max(1000, 40 * parseInt(el.data('amount'), 10));
 
             var doAnimation = function() {
                 el.animate({
@@ -59,7 +58,9 @@
                     complete: function() {
                         el.animate({ marginLeft: 0 }, {
                             duration: duration,
-                            complete: setTimeout(doAnimation, 0)
+                            complete: function() {
+                                setTimeout(doAnimation, 0);
+                            }
                         });
                     }
                 });
@@ -74,20 +75,32 @@
         }
 
         var doScrollAnimation = function() {
+            var goingBack = false;
             scrollElement.animate({
                 scrollTop: amount
             }, {
                 easing: 'linear',
                 duration: duration,
                 complete: function() {
+                    if (goingBack) {
+                        return;
+                    }
+                    goingBack = true;
                     scrollElement.animate({ scrollTop: 0 }, {
                         easing: 'linear',
                         duration: duration,
-                        complete: setTimeout(doScrollAnimation, 0)
+                        complete: function() {
+                            if (!goingBack) {
+                                return;
+                            }
+                            goingBack = false;
+                            setTimeout(doScrollAnimation, 0);
+                        }
                     });
                 }
             });
-        }
+        };
+        scrollElement.stop(true, false).scrollTop(0);
         doScrollAnimation();
 
     };
