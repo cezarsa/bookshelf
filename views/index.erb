@@ -10,13 +10,11 @@
 
 <div class="books">
 <% @books.each do |book| %>
-    
     <div>
         <img src="<%= book.image %>">
         <div class="title"><%= book.title %></div>
         <div class="author"><%= book.author %></div>
     </div>
-
 <% end %>
 </div>
 

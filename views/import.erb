@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BookShelf</title>
+    <%= stylesheet_link_tag "/css/reset.css" %>
+    <%= stylesheet_link_tag "/css/import.css" %>
+</head>
+<body>
+
+<div class="main">
+    <a href="https://www.amazon.com/gp/digital/fiona/manage/features/order-history/ajax/queryOwnership_refactored2.html?offset=0&count=1000" class="amazon-json">Grab your book list</a>
+    <div class="middle-area">
+        <svg class="first-arrow">
+            <defs>
+                <marker id="Triangle"
+                  viewBox="0 0 10 10" refX="0" refY="5"
+                  stroke="#fff"
+                  markerUnits="strokeWidth"
+                  markerWidth="10" markerHeight="20"
+                  orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" />
+                </marker>
+            </defs>
+            <!-- <path d="M 50 120 Q 50,200 100,200" fill="none" stroke="#fff" marker-end="url(#Triangle)" /> -->
+            <path id="arrow" d="M 50 70 Q -10,150 50,150" fill="none" stroke="#fff" marker-end="url(#Triangle)" />
+        </svg>
+        <p>paste it here</p>
+        <svg class="second-arrow">
+            <use xlink:href="#arrow" transform="matrix(-1, 0, 0, 1, 0, 0) translate(-100,0) rotate(90)"/>
+        </svg>
+    </div>
+    <form action="/import" method="POST">
+        <textarea name="amazondata"></textarea>
+        <div class="bottom-area">
+            <svg class="third-arrow">
+                <use xlink:href="#arrow" />
+            </svg>
+
+            <button type="submit" class="generate-button">Generate bookshelf</button>
+        </div>
+    </form>
+</div>
+
+<%= javascript_tag "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" %>
+<script>
+$('.amazon-json').click(function(ev) {
+    ev.preventDefault();
+    window.open(this.href,'amazonpopup','height=400,width=650');
+});
+$('.generate-button').click(function(ev) {
+    var form = $(this).parents('form'),
+        txtArea = form.find('textarea');
+
+    if (!txtArea.val()) {
+        ev.preventDefault();
+        alert('You must grab your book list (big button up there) and paste it in the text area first.');
+    }
+});
+</script>
+</body>
+</html>

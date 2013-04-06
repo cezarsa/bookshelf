@@ -50,6 +50,7 @@ $bookshelf_config = BookshelfConfig.new
 class BookShelf < Sinatra::Base
 
   configure do
+    Mongoid.load!("config/mongoid.yml")
     register Sinatra::StaticAssets
 
     ASIN::Configuration.configure do |config|
@@ -60,6 +61,9 @@ class BookShelf < Sinatra::Base
   end
 
   configure :development do
+    Mongoid.logger.level = Logger::DEBUG
+    Moped.logger.level = Logger::DEBUG
+
     register Sinatra::Reloader
     also_reload './models/*'
   end
@@ -69,24 +73,35 @@ class BookShelf < Sinatra::Base
     books.sort_by! { |b| [b.author_last_name, b.title] }
   end
 
-  get "/:email/:password" do |email, password|
-    @books = Books.new(email, password).all
-    filter_books(@books)
-
-    erb :index
+  get "/import" do
+    erb :import
   end
 
-  get "/:email" do |email|
-    return '' if email == 'favicon.ico'
+  post "/import" do
 
-    @books = Books.new(email, nil).all
+    uuid = UUID.generate
+    u = User.new(uuid: uuid, amazon_data: params[:amazondata], last_updated: DateTime.now)
+
+    if u.save
+      redirect url("/#{uuid}")
+    else
+      @errors = u.errors
+      erb :import
+    end
+  end
+
+  get "/:uuid" do |uuid|
+    u = User.where(uuid: uuid).first
+    data = u.amazon_data.gsub(/\r?\n/m, '').gsub(/(,|{)(\w+?):/, '\1"\2":')
+
+    @books = Books.new(data).all
     filter_books(@books)
 
     erb :index
   end
 
   get "/" do
-    @books = Books.new($bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
+    @books = Books.new(nil, $bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
     filter_books(@books)
 
     erb :index

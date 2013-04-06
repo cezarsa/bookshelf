@@ -8,6 +8,8 @@ gem 'thin'
 gem 'asin'
 gem 'httpclient'
 gem 'text'
+gem 'mongoid'
+gem 'uuid'
 
 group :development do
   gem 'debugger'

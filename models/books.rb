@@ -1,22 +1,43 @@
 require 'mechanize'
 require 'json'
 
+
+class User
+  include Mongoid::Document
+
+  field :uuid, type: String
+  field :amazon_data, type: String
+  field :last_updated, type: DateTime
+
+end
+
 class Books
   AMAZON_URL = "http://www.amazon.com/"
   KINDLE_BOOKS_URL = "https://www.amazon.com/gp/digital/fiona/manage/features/order-history/ajax/queryOwnership_refactored2.html?offset=0&count=100"
   CACHE_MAX_AGE = 24 * 60 * 60
 
-  def initialize(email, password)
-    @email = email
-    @password = password
-
-    books = fetch_from_cache
-    if books
-      @books = books.map { |b| Book.from_cache(b) }
+  def initialize(amazondata = nil, email = nil, password = nil)
+    if amazondata
+      books = JSON.parse(amazondata)
+      @books = books['data']['items'].map do |order_data|
+        if order_data['firstOrderDate'] == 0
+          puts order_data['title']
+        else
+          Book.from_amazon(nil, order_data)
+        end
+      end.compact
     else
-      raise "password required" if password.nil?
-      @books = fetch_from_amazon
-      update_cache(@books)
+      @email = email
+      @password = password
+
+      books = fetch_from_cache
+      if books
+        @books = books.map { |b| Book.from_cache(b) }
+      else
+        raise "password required" if password.nil?
+        @books = fetch_from_amazon
+        update_cache(@books)
+      end
     end
   end
 
