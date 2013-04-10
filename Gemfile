@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
+ruby "1.9.3"
 
 gem 'mechanize'
 gem 'sinatra', '1.3.3', :require => "sinatra/base"
