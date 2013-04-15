@@ -133,7 +133,7 @@ class Book
   end
 
   def image
-    order_data['image'].gsub('._SX105_', '')
+    order_data['image'].to_s.gsub('._SX105_', '')
   end
 
   def order_date
