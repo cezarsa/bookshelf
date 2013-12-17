@@ -39,6 +39,12 @@ class BookShelf < Sinatra::Base
   end
 
   get "/:id" do |id|
+    user = User.where(user_id: id).first
+    if user && user.books && user.books.size > 0
+      @books = user.books.map {|book| Book.new(book)}
+      return erb :index
+    end
+
     client = Goodreads.new
     user_info = client.user(id)
     user_id = user_info[:id]
@@ -58,6 +64,8 @@ class BookShelf < Sinatra::Base
 
     asin_client = ASIN::Client.instance
     @books = all_books.map do |b|
+      author_name = b[:authors][:author][:name].strip
+
       if b[:image_url] =~ /nocover/
         puts "No cover for #{b[:title]}"
         asin = b[:asin] || b[:isbn]
@@ -69,18 +77,28 @@ class BookShelf < Sinatra::Base
         item = asin_client.lookup(asin)
         if item.size == 0
           puts "Not found on amazon, trying text search"
-          item = asin_client.search_keywords("#{b[:title].gsub(/\(.*\)/, '').strip} #{b[:authors][:author][:name].strip}")
+          item = asin_client.search_keywords("#{b[:title].gsub(/\(.*\)/, '').strip} #{author_name}")
         end
         if item.size > 0
           b[:image_url] = item[0].raw.LargeImage.URL
           puts "Image found for #{b[:title]} - #{b[:image_url]}"
         end
         puts "\n\n\n"
+      else
+        b[:image_url].gsub!(/books\/(.+)m\//, "books/\\1l/")
       end
 
-      Book.new(b)
+      Book.new({
+        title: b[:title],
+        author: author_name,
+        image: b[:image_url]
+      })
     end
     @books = @books.sort_by { |b| [b.author_last_name, b.title] }
+
+    user = User.new(user_id: id, books: @books.map(&:to_hash), last_updated: DateTime.now)
+    p user.save
+    p user.errors
     erb :index
   end
 
