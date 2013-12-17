@@ -97,7 +97,7 @@ class BookShelf < Sinatra::Base
     @books = @books.sort_by { |b| [b.author_last_name, b.title] }
 
     user = User.new(user_id: id, books: @books.map(&:to_hash), last_updated: DateTime.now)
-    p user.save
+    p user.upsert
     p user.errors
     erb :index
   end
