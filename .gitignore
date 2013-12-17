@@ -5,3 +5,4 @@
 .bundle
 .sass-cache/
 config.yml
+.env

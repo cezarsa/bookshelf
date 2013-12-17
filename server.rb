@@ -1,62 +1,26 @@
-['models'].each do |path|
-  Dir["#{path}/*.rb"].each do |file|
-    require_relative file
-  end
-end
+require_relative 'models/books'
 
-class BookshelfConfig
-
-  def initialize
-    begin
-      @config = YAML.load_file('config.yml')
-    rescue SyntaxError
-    rescue
-    end
-    @config ||= {}
-    @config['amazon'] ||= {}
-    @config['amazon'].merge!({
-      'secret' => ENV['AMAZON_SECRET'],
-      'key' => ENV['AMAZON_KEY'],
-      'email' => ENV['AMAZON_EMAIL'],
-      'password' => ENV['AMAZON_PASSWORD']
-    }) { |k, v1, v2| v2 ? v2 : v1 }
-
-    if @config['amazon'].any? { |k, v| v.nil? }
-      error!
-    end
-  end
-
-  def error!
-    puts <<-END
-You have to create a config.yml file with:
-
-amazon:
-  key: <your aws api key>
-  secret: <your aws api secret>
-  email: <your email>
-  password: <your password>
-
-    END
-    exit -1
-  end
-
-  def method_missing(method_id, *args)
-    method_id.to_s.split('_').inject(@config) { |acc, p| acc[p] }
-  end
-end
-
-$bookshelf_config = BookshelfConfig.new
 
 class BookShelf < Sinatra::Base
+
+  use Rack::Session::Cookie, secret: (ENV['SESSION_SECRET'] || 'some-secret')
+  use OmniAuth::Builder do
+    provider :goodreads, ENV['GOODREADS_KEY'], ENV['GOODREADS_SECRET']
+  end
 
   configure do
     Mongoid.load!("config/mongoid.yml")
     register Sinatra::StaticAssets
 
+    Goodreads.configure(
+      :api_key => ENV['GOODREADS_KEY'],
+      :api_secret => ENV['GOODREADS_SECRET']
+    )
+
     ASIN::Configuration.configure do |config|
-      config.secret        = $bookshelf_config.amazon_secret
-      config.key           = $bookshelf_config.amazon_key
-      config.associate_tag = 'something'
+      config.secret        = ENV['AMAZON_SECRET']
+      config.key           = ENV['AMAZON_KEY']
+      config.associate_tag = 'your-tag'
     end
   end
 
@@ -68,43 +32,64 @@ class BookShelf < Sinatra::Base
     also_reload './models/*'
   end
 
-  def filter_books(books)
-    books.delete_if { |b| b.order_data['title'][/dictionary/i] }
-    books.sort_by! { |b| [b.author_last_name, b.title] }
+  get '/auth/:provider/callback' do
+    auth = request.env['omniauth.auth']
+    session[:user_id] = auth[:extra][:raw_info][:id]
+    redirect "/#{session[:user_id]}"
   end
 
-  get "/import" do
-    erb :import
-  end
-
-  post "/import" do
-
-    uuid = UUID.generate
-    u = User.new(uuid: uuid, amazon_data: params[:amazondata], last_updated: DateTime.now)
-
-    if u.save
-      redirect url("/#{uuid}")
-    else
-      @errors = u.errors
-      erb :import
+  get "/:id" do |id|
+    client = Goodreads.new
+    user_info = client.user(id)
+    user_id = user_info[:id]
+    shelves = user_info[:user_shelves]
+    all_books = []
+    page = 1
+    shelves.each do |shelf_data|
+      while true
+        shelf = client.shelf(user_id, shelf_data[:id], page: page)
+        break if shelf.books.size == 0
+        shelf.books.each do |shelf_book|
+          all_books << shelf_book.book
+        end
+        page += 1
+      end
     end
-  end
 
-  get "/:uuid" do |uuid|
-    u = User.where(uuid: uuid).first
-    data = u.amazon_data.gsub(/\r?\n/m, '').gsub(/(,|{)(\w+?):/, '\1"\2":')
+    asin_client = ASIN::Client.instance
+    @books = all_books.map do |b|
+      if b[:image_url] =~ /nocover/
+        puts "No cover for #{b[:title]}"
+        asin = b[:asin] || b[:isbn]
+        if not asin
+          puts "No asin for #{b[:title]}"
+          extended_book_data = client.book(b[:id]) rescue client.book(b[:id])
+          asin = extended_book_data[:asin] || extended_book_data[:isbn]
+        end
+        item = asin_client.lookup(asin)
+        if item.size == 0
+          puts "Not found on amazon, trying text search"
+          item = asin_client.search_keywords("#{b[:title].gsub(/\(.*\)/, '').strip} #{b[:authors][:author][:name].strip}")
+        end
+        if item.size > 0
+          b[:image_url] = item[0].raw.LargeImage.URL
+          puts "Image found for #{b[:title]} - #{b[:image_url]}"
+        end
+        puts "\n\n\n"
+      end
 
-    @books = Books.new(data).all
-    filter_books(@books)
-
+      Book.new(b)
+    end
+    @books = @books.sort_by { |b| [b.author_last_name, b.title] }
     erb :index
   end
 
   get "/" do
-    @books = Books.new(nil, $bookshelf_config.amazon_email, $bookshelf_config.amazon_password).all
-    filter_books(@books)
-
-    erb :index
+    if session[:user_id]
+      redirect "/#{session[:user_id]}"
+    else
+      redirect "/auth/goodreads"
+    end
   end
 
 end
