@@ -49,56 +49,25 @@ class BookShelf < Sinatra::Base
     user_info = client.user(id)
     user_id = user_info[:id]
     shelves = user_info[:user_shelves]
-    all_books = []
+    @books = []
     page = 1
     shelves.each do |shelf_data|
       while true
         shelf = client.shelf(user_id, shelf_data[:id], page: page)
         break if shelf.books.size == 0
         shelf.books.each do |shelf_book|
-          all_books << shelf_book.book
+          @books << Book.new(goodreads_data: shelf_book.book)
         end
         page += 1
       end
     end
 
-    asin_client = ASIN::Client.instance
-    @books = all_books.map do |b|
-      author_name = b[:authors][:author][:name].strip
+    @books = @books.sort_by { |b| [b.author_last_name, b.pub_date, b.title] }
 
-      if b[:image_url] =~ /nocover/
-        puts "No cover for #{b[:title]}"
-        asin = b[:asin] || b[:isbn]
-        if not asin
-          puts "No asin for #{b[:title]}"
-          extended_book_data = client.book(b[:id]) rescue client.book(b[:id])
-          asin = extended_book_data[:asin] || extended_book_data[:isbn]
-        end
-        item = asin_client.lookup(asin)
-        if item.size == 0
-          puts "Not found on amazon, trying text search"
-          item = asin_client.search_keywords("#{b[:title].gsub(/\(.*\)/, '').strip} #{author_name}")
-        end
-        if item.size > 0
-          b[:image_url] = item[0].raw.LargeImage.URL
-          puts "Image found for #{b[:title]} - #{b[:image_url]}"
-        end
-        puts "\n\n\n"
-      else
-        b[:image_url].gsub!(/books\/(.+)m\//, "books/\\1l/")
-      end
-
-      Book.new({
-        title: b[:title],
-        author: author_name,
-        image: b[:image_url]
-      })
-    end
-    @books = @books.sort_by { |b| [b.author_last_name, b.title] }
-
-    user = User.new(user_id: id, books: @books.map(&:to_hash), last_updated: DateTime.now)
-    p user.upsert
-    p user.errors
+    user = User.find_or_create_by(user_id: id)
+    user.books = @books.map(&:to_hash)
+    user.last_updated = DateTime.now
+    user.upsert
     erb :index
   end
 
