@@ -14,6 +14,7 @@ end
 
 
 BOOK_ATTRS = [:goodreads_data, :goodreads_ext_data, :amazon_data]
+MAX_RETRIES = 5
 
 class Book
 
@@ -27,29 +28,56 @@ class Book
     try_pub_date
   end
 
+  def with_retries
+    retries = MAX_RETRIES
+    while retries > 0
+      retries -= 1
+
+      begin
+        yield
+        break
+      rescue Exception => e
+        to_sleep = 2**(MAX_RETRIES - retries)
+        puts "Request error #{e}, retrying in #{to_sleep}s"
+        sleep(to_sleep)
+        raise if retries == 0
+      end
+    end
+  end
+
   def goodreads_ext_data
     return @goodreads_ext_data unless @goodreads_ext_data.nil?
     puts "Fetching goodreads_ext_data for #{self.title}"
-    client = Goodreads.new
-    @goodreads_ext_data = client.book(goodreads_data['id']) rescue client.book(goodreads_data['id'])
+
+    with_retries do
+      client = Goodreads.new
+      @goodreads_ext_data = client.book(goodreads_data['id'])
+    end
+
+    @goodreads_ext_data = false unless @goodreads_ext_data
+    @goodreads_ext_data
   end
 
   def amazon_data
     return @amazon_data unless @amazon_data.nil?
     puts "Fetching amazon_data for #{self.title}"
-    asin_client = ASIN::Client.instance
-    asin = goodreads_data['asin'] || goodreads_data['isbn'] || goodreads_ext_data['asin'] || goodreads_ext_data['isbn']
-    item = asin_client.lookup(asin)
-    if item.size == 0
-      keywords = "#{self.title.gsub(/\(.*\)/, '').strip} #{self.author}"
-      puts "Trying amazon text search for #{keywords}"
-      item = asin_client.search_keywords(keywords)
+
+    with_retries do
+      asin_client = ASIN::Client.instance
+      asin = goodreads_data['asin'] || goodreads_data['isbn'] || goodreads_ext_data['asin'] || goodreads_ext_data['isbn']
+      item = asin_client.lookup(asin)
+      if item.size == 0
+        keywords = "#{self.title.gsub(/\(.*\)/, '').strip} #{self.author}"
+        puts "Trying amazon text search for #{keywords}"
+        item = asin_client.search_keywords(keywords)
+      end
+      if item.size > 0
+        @amazon_data = item[0].raw
+      end
     end
-    if item.size > 0
-      @amazon_data = item[0].raw
-    else
-      @amazon_data = false
-    end
+
+    @amazon_data = false unless @amazon_data
+    @amazon_data
   end
 
   def try_cover
