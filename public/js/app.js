@@ -100,8 +100,8 @@
                 }
             });
         };
-        // scrollElement.stop(true, false).scrollTop(0);
-        // doScrollAnimation();
+        scrollElement.stop(true, false).scrollTop(0);
+        doScrollAnimation();
 
     };
 
