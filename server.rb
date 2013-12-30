@@ -39,35 +39,9 @@ class BookShelf < Sinatra::Base
   end
 
   get "/:id" do |id|
-    user = User.where(user_id: id).first
-    if user && user.books && user.books.size > 0
-      @books = user.books.map {|book| Book.new(book)}
-      return erb :index
-    end
-
-    client = Goodreads.new
-    user_info = client.user(id)
-    user_id = user_info[:id]
-    shelves = user_info[:user_shelves]
-    @books = []
-    page = 1
-    shelves.each do |shelf_data|
-      while true
-        shelf = client.shelf(user_id, shelf_data[:id], page: page)
-        break if shelf.books.size == 0
-        shelf.books.each do |shelf_book|
-          @books << Book.new(goodreads_data: shelf_book.book)
-        end
-        page += 1
-      end
-    end
-
-    @books = @books.sort_by { |b| [b.author_last_name, b.pub_date, b.title] }
-
     user = User.find_or_create_by(user_id: id)
-    user.books = @books.map(&:to_hash)
-    user.last_updated = DateTime.now
-    user.upsert
+    @books = user.load_books(!!params[:force])
+
     erb :index
   end
 

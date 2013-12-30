@@ -3,7 +3,8 @@
     var scrollElement = $('html, body'),
         booksArea = $('.books'),
         items = booksArea.find('> div'),
-        $window = $(window);
+        $window = $(window),
+        scrollTimeout = null;
 
     var oldWidth = null, oldHeight = null;
     var update = function(opts) {
@@ -94,17 +95,24 @@
                                 return;
                             }
                             goingBack = false;
-                            setTimeout(doScrollAnimation, 0);
+                            scrollTimeout = setTimeout(doScrollAnimation, 0);
                         }
                     });
                 }
             });
         };
+        clearTimeout(scrollTimeout);
         scrollElement.stop(true, false).scrollTop(0);
         doScrollAnimation();
 
     };
 
     $window.resize(update);
+    $window.keyup(function (ev) {
+        if (ev.keyCode === 27) {
+            clearTimeout(scrollTimeout);
+            scrollElement.stop(true, false);
+        }
+    });
     booksArea.imagesLoaded(update);
 }(jQuery));

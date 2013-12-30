@@ -1,5 +1,6 @@
 require 'mechanize'
 require 'json'
+require 'set'
 
 
 class User
@@ -10,6 +11,69 @@ class User
   field :last_updated, type: DateTime
 
   attr_accessible :user_id, :books, :last_updated
+
+  def each_goodreads_books
+    client = Goodreads.new
+    page = 1
+    while true
+      shelf = client.shelf(user_id, nil, page: page, per_page: 200)
+      break if shelf.nil? || shelf.books.nil? || shelf.books.size == 0
+      shelf.books.each do |shelf_book|
+        shelf_name = shelf_book.shelves.shelf.name
+        next unless ['read', 'currently-reading'].include?(shelf_name)
+        yield shelf_book.book
+      end
+      page += 1
+    end
+  end
+
+  def load_books(force_update)
+    if self.books && self.books.size > 0 && !force_update
+      existing_books = self.books.map { |book| Book.new(book) }
+      self.check_new(existing_books)
+    else
+      self.update_books!
+    end
+  end
+
+  def check_new(existing_books)
+    new_books = []
+    existing_ids = Set.new(existing_books.map { |book| book.id })
+    all_ids = Set.new
+
+    self.each_goodreads_books do |goodreads_data|
+      all_ids << goodreads_data['id']
+      next if existing_ids.include?(goodreads_data['id'])
+      new_books << Book.new(goodreads_data: goodreads_data)
+    end
+
+    books = existing_books.select { |book| all_ids.include?(book.id) }
+
+    if books.size != existing_books.size || new_books.size > 0
+      self.save_new_books(books + new_books)
+    end
+
+    books
+  end
+
+  def update_books!
+    books = []
+    self.each_goodreads_books do |goodreads_data|
+      books << Book.new(goodreads_data: goodreads_data)
+    end
+
+    self.save_new_books(books)
+
+    books
+  end
+
+  def save_new_books(books)
+    books = books.sort_by { |b| [b.author_last_name, b.pub_date, b.title] }
+
+    self.books = books.map(&:to_hash)
+    self.last_updated = DateTime.now
+    self.upsert
+  end
 end
 
 
@@ -24,8 +88,8 @@ class Book
     BOOK_ATTRS.each do |var|
       self.instance_variable_set("@#{var}".to_sym, data[var] || data[var.to_s])
     end
-    try_cover
-    try_pub_date
+    update_cover
+    update_pub_date
   end
 
   def with_retries
@@ -80,7 +144,7 @@ class Book
     @amazon_data
   end
 
-  def try_cover
+  def update_cover
     return if goodreads_data['image_url'] && !(goodreads_data['image_url'] =~ /nocover/)
 
     data = self.amazon_data
@@ -89,7 +153,7 @@ class Book
     end
   end
 
-  def try_pub_date
+  def update_pub_date
     return if goodreads_data['publication_year']
 
     data = self.amazon_data
@@ -97,6 +161,10 @@ class Book
       pub_date = data['ItemAttributes']['PublicationDate'].split('-')
       goodreads_data["publication_year"], goodreads_data["publication_month"], goodreads_data["publication_day"] = pub_date
     end
+  end
+
+  def id
+    goodreads_data['id']
   end
 
   def author
