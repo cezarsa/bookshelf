@@ -9,23 +9,71 @@ html {
     overflow: hidden;
 }
 
-.books > div {
+.books .line {
+    display: block;
+
+}
+
+.books .book {
     display: inline-block;
     vertical-align: top;
 
     *display: inline;
     *zoom: 1;
+
+    -webkit-perspective: 600px;
+    -webkit-perspective-origin: 50% 100px;
 }
 
-.books .title, .books .author {
-    font-size: 12px;
-    display: none;
+.books .inner-wrapper {
+    position: relative;
+
+    -webkit-transform-style: preserve-3d;
+    transition: -webkit-transform 400ms ease-in-out;
 }
 
-.books .title {
-    font-weight: bold;
+.books .book.three-d .inner-wrapper {
+    -webkit-transform: translateZ(-140px) rotateY(45deg) rotateX(-10deg) rotateZ(-7deg);
+}
+
+.books .front, .books .side, .books .top {
+    -webkit-transform-origin: 0 0;
+}
+
+.books .front {
+    -webkit-transform: rotateY(0deg);
+}
+
+.books .side {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    -webkit-transform: rotateY(-90deg) rotateZ(90deg);
+    box-sizing: border-box;
+    padding: 10px;
+    background: #fff;
+    font-size: 18px;
+    width: 400px;
+    height: 55px;
+}
+
+.books .top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-image: url(../side.jpg);
+
+    -webkit-transform: rotateX(90deg) translateY(-100%);
+    width: 100%;
+    height: 55px;
 }
 
 .books img {
     height: 400px;
+}
+
+
+.books .title {
+    font-weight: bold;
 }

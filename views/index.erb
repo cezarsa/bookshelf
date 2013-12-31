@@ -11,10 +11,17 @@
 <div class="books">
 <% @books.each do |book| %>
     <div class="book">
-        <img src="<%= book.image %>">
-        <div class="title"><%= book.title %></div>
-        <div class="author"><%= book.author %></div>
-        <div class="pub-date"><%= book.pub_date %></div>
+        <div class="inner-wrapper">
+            <div class="front">
+                <img src="<%= book.image %>">
+            </div>
+            <div class="side">
+                <div class="title"><%= book.title %></div>
+                <div class="author"><%= book.author %></div>
+            </div>
+            <div class="top"></div>
+            <!-- <div class="pub-date"><%= book.pub_date %></div> -->
+        </div>
     </div>
 <% end %>
 </div>
