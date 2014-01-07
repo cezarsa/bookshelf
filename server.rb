@@ -1,3 +1,4 @@
+require 'open-uri'
 require_relative 'models/books'
 
 
@@ -30,6 +31,7 @@ class BookShelf < Sinatra::Base
 
     register Sinatra::Reloader
     also_reload './models/*'
+    set :protection, except: :path_traversal
   end
 
   get '/auth/:provider/callback' do
@@ -37,6 +39,10 @@ class BookShelf < Sinatra::Base
     session[:user_id] = auth[:extra][:raw_info][:id]
     redirect "/#{session[:user_id]}"
   end
+
+  # get %r{/img/(.*)} do |img_path|
+  #   URI.parse(img_path).read
+  # end
 
   get "/:id" do |id|
     user = User.find_or_create_by(user_id: id)

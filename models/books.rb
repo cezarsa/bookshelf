@@ -148,8 +148,10 @@ class Book
     return if goodreads_data['image_url'] && !(goodreads_data['image_url'] =~ /nocover/)
 
     data = self.amazon_data
-    if data
-      goodreads_data['image_url'] = data['LargeImage']['URL']
+    new_cover = data && data['LargeImage'] && data['LargeImage']['URL']
+
+    if new_cover
+      goodreads_data['image_url'] = new_cover
     end
   end
 
@@ -157,9 +159,10 @@ class Book
     return if goodreads_data['publication_year']
 
     data = self.amazon_data
-    if data
-      pub_date = data['ItemAttributes']['PublicationDate'].split('-')
-      goodreads_data["publication_year"], goodreads_data["publication_month"], goodreads_data["publication_day"] = pub_date
+    pub_date = data && data['ItemAttributes'] && data['ItemAttributes']['PublicationDate']
+
+    if pub_date
+      goodreads_data["publication_year"], goodreads_data["publication_month"], goodreads_data["publication_day"] = pub_date.split('-')
     end
   end
 
