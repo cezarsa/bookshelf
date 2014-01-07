@@ -14,17 +14,15 @@ GEM
       httpi (>= 0.9)
     backports (3.3.5)
     builder (3.0.4)
+    byebug (2.5.0)
+      columnize (~> 0.3.6)
+      debugger-linecache (~> 1.2.0)
     columnize (0.3.6)
     confiture (0.1.4)
     crack (0.4.1)
       safe_yaml (~> 0.9.0)
     daemons (1.1.9)
-    debugger (1.6.3)
-      columnize (>= 0.3.1)
-      debugger-linecache (~> 1.2.0)
-      debugger-ruby_core_source (~> 1.2.4)
     debugger-linecache (1.2.0)
-    debugger-ruby_core_source (1.2.4)
     domain_name (0.5.15)
       unf (>= 0.0.5, < 1.0.0)
     eventmachine (1.0.3)
@@ -120,7 +118,7 @@ PLATFORMS
 
 DEPENDENCIES
   asin
-  debugger
+  byebug
   goodreads
   httpclient
   mechanize
