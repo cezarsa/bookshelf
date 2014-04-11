@@ -10,18 +10,24 @@ class User
   field :books, type: Array
   field :last_updated, type: DateTime
 
-  attr_accessible :user_id, :books, :last_updated
+  attr_accessor :access_token
 
   def each_goodreads_books
-    client = Goodreads.new
+    wanted_shelves = Set['read', 'currently-reading']
+    client = Goodreads.new(oauth_token: access_token)
     page = 1
     while true
       shelf = client.shelf(user_id, nil, page: page, per_page: 200)
       break if shelf.nil? || shelf.books.nil? || shelf.books.size == 0
       shelf.books.each do |shelf_book|
-        shelf_name = shelf_book.shelves.shelf.name
-        next unless ['read', 'currently-reading'].include?(shelf_name)
-        yield shelf_book.book
+        shelf = shelf_book.shelves.shelf
+        unless shelf.kind_of? Array
+          shelf = [shelf]
+        end
+        shelf_names = Set.new(shelf.map(&:name))
+        if (shelf_names & wanted_shelves).size > 0
+          yield shelf_book.book
+        end
       end
       page += 1
     end

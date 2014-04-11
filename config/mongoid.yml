@@ -4,13 +4,8 @@ development:
       hosts:
         - localhost:27017
       database: bookshelf_development
-  options:
-    identity_map_enabled: true
 
 production:
   sessions:
     default:
       uri: <%= ENV['MONGOLAB_URI'] %>
-  options:
-    identity_map_enabled: true
-

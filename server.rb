@@ -37,17 +37,29 @@ class BookShelf < Sinatra::Base
   get '/auth/:provider/callback' do
     auth = request.env['omniauth.auth']
     session[:user_id] = auth[:extra][:raw_info][:id]
-    redirect "/#{session[:user_id]}"
+    session[:credentials] = auth[:credentials]
+    redirect "/"
   end
 
   # get %r{/img/(.*)} do |img_path|
   #   URI.parse(img_path).read
   # end
 
+  get "/logout" do
+    session.clear
+    env['rack.session'].clear
+    redirect "/auth/goodreads"
+  end
+
   get "/:id" do |id|
     user = User.find_or_create_by(user_id: id)
+    credentials = session[:credentials]
+    if credentials
+      consumer = OAuth::Consumer.new(ENV['GOODREADS_KEY'], ENV['GOODREADS_SECRET'], {site: 'http://www.goodreads.com'})
+      access_token = OAuth::AccessToken.new(consumer, credentials['token'], credentials['secret'])
+      user.access_token = access_token
+    end
     @books = user.load_books(!!params[:force])
-
     erb :index
   end
 
