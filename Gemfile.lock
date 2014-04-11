@@ -1,4 +1,15 @@
 GIT
+  remote: git://github.com/cezarsa/goodreads.git
+  revision: a0cec884b4df69aca2764264e062350b910dcfd4
+  specs:
+    goodreads (0.3.0)
+      activesupport (>= 3.0)
+      hashie (~> 2.0)
+      i18n (~> 0.5)
+      oauth (~> 0.4)
+      rest-client (~> 1.6)
+
+GIT
   remote: git://github.com/mongoid/mongoid.git
   revision: 026e32109178eef2a50b31924f45eee2b7e05c82
   specs:
@@ -42,12 +53,6 @@ GEM
     domain_name (0.5.18)
       unf (>= 0.0.5, < 1.0.0)
     eventmachine (1.0.3)
-    goodreads (0.3.0)
-      activesupport (>= 3)
-      hashie (~> 2.0)
-      i18n (~> 0.5)
-      oauth (~> 0.4)
-      rest-client (~> 1.6)
     hashie (2.1.0)
     http-cookie (1.0.2)
       domain_name (~> 0.5)
@@ -139,7 +144,7 @@ DEPENDENCIES
   asin
   bson_ext
   byebug
-  goodreads
+  goodreads!
   httpclient
   mechanize
   mongoid!
