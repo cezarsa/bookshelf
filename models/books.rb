@@ -49,7 +49,10 @@ class User
 
     self.each_goodreads_books do |goodreads_data|
       all_ids << goodreads_data['id']
-      next if existing_ids.include?(goodreads_data['id'])
+      if existing_ids.include?(goodreads_data['id'])
+        book = existing_books.find {|b| b.id == goodreads_data['id'] }
+        next if book.valid_cover?
+      end
       new_books << Book.new(goodreads_data: goodreads_data)
     end
 
@@ -150,8 +153,12 @@ class Book
     @amazon_data
   end
 
+  def valid_cover?
+    goodreads_data['image_url'] && !(goodreads_data['image_url'] =~ /nocover|nophoto/)
+  end
+
   def update_cover
-    return if goodreads_data['image_url'] && !(goodreads_data['image_url'] =~ /nocover/)
+    return if self.valid_cover?
 
     data = self.amazon_data
     new_cover = data && data['LargeImage'] && data['LargeImage']['URL']
