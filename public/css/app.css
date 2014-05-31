@@ -41,7 +41,9 @@ html {
 }
 
 .books .front {
+    position: relative;
     -webkit-transform: rotateY(0deg);
+    z-index: 20;
 }
 
 .books .side {
@@ -56,6 +58,7 @@ html {
     font-size: 18px;
     width: 400px;
     height: 55px;
+    z-index: 10;
 }
 
 .books .top {
@@ -67,6 +70,7 @@ html {
     -webkit-transform: rotateX(90deg) translateY(-100%);
     width: 100%;
     height: 55px;
+    z-index: 10;
 }
 
 .books img {
