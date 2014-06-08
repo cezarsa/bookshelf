@@ -41,10 +41,6 @@ class BookShelf < Sinatra::Base
     redirect "/"
   end
 
-  # get %r{/img/(.*)} do |img_path|
-  #   URI.parse(img_path).read
-  # end
-
   get "/logout" do
     session.clear
     env['rack.session'].clear

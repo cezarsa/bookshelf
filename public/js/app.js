@@ -123,11 +123,12 @@
     };
 
     var updateLabelColors = function() {
+        var colorApi = $('body').data('color-api');
         books.each(function(i, book) {
             book = $(book);
             var img = book.find('img'),
                 src = img.attr('src');
-            $.getJSON("http://localhost:5000/img/" + src, function(data) {
+            $.getJSON(colorApi + "/img/" + src, function(data) {
                 book.data('colors', data);
                 var data = book.data('colors'),
                     colors = data.colors;
