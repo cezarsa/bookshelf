@@ -2,12 +2,13 @@
 
     var scrollElement = $('html, body'),
         booksArea = $('.books'),
-        items = booksArea.find('.book'),
+        books = booksArea.find('.book'),
         $window = $(window),
         scrollTimeout = null;
 
     var oldWidth = null, oldHeight = null;
-    var update = function(opts) {
+
+    var update = function() {
         var winWidth = $window.width(),
             winHeight = $window.height();
 
@@ -17,21 +18,26 @@
         oldWidth = winWidth;
         oldHeight = winHeight;
 
-        var width = winWidth,
-            toBreak = [],
+        fixBooksArea(winWidth);
+        startSideAnimation();
+        startScrollAnimation(winHeight);
+    };
+
+    var fixBooksArea = function(width) {
+        var toBreak = [],
             acc = 0,
             lastBreak = 0;
 
         booksArea.width(width);
-        items.stop(true, false);
+        books.stop(true, false);
         booksArea.find('.book').appendTo(booksArea);
         booksArea.find('.line').remove();
 
         var line = $('<div class="line">'),
             lineWidth = 0;
 
-        for (var i = 0, len = items.length; i < len; ++i) {
-            var item = items.eq(i),
+        for (var i = 0, len = books.length; i < len; ++i) {
+            var item = books.eq(i),
                 pos = item.offset();
 
             lineWidth += item.width();
@@ -48,7 +54,9 @@
         if (lineWidth > 0) {
             booksArea.append(line);
         }
+    };
 
+    var startSideAnimation = function() {
         booksArea.find('.line').each(function() {
             var el = $(this),
                 duration = Math.max(1000, 40 * parseInt(el.data('amount'), 10));
@@ -70,7 +78,9 @@
             };
             doAnimation();
         });
+    }
 
+    var startScrollAnimation = function(winHeight) {
         var amount = booksArea.height() - winHeight,
             duration = amount * 20;
         if (amount < 0) {
@@ -106,7 +116,26 @@
         clearTimeout(scrollTimeout);
         scrollElement.stop(true, false).scrollTop(0);
         doScrollAnimation();
+    };
 
+    var toRGB = function(arr) {
+        return "rgb(" + arr.join(',') + ")";
+    };
+
+    var updateLabelColors = function() {
+        books.each(function(i, book) {
+            book = $(book);
+            var img = book.find('img'),
+                src = img.attr('src');
+            $.getJSON("http://localhost:5000/img/" + src, function(data) {
+                book.data('colors', data);
+                var data = book.data('colors'),
+                    colors = data.colors;
+                book.find('.side').css('background-color', toRGB(colors[0]));
+                book.find('.title').css('color', toRGB(colors[1]));
+                book.find('.author').css('color', toRGB(colors[2]));
+            });
+        });
     };
 
     $window.resize(update);
@@ -127,4 +156,5 @@
     });
 
     booksArea.imagesLoaded(update);
+    updateLabelColors();
 }(jQuery));
