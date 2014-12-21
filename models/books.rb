@@ -176,8 +176,11 @@ class Book
     end
     puts "Fetching best book from #{self.title}: #{best_book_id}"
     return nil unless best_book_id
-    client = Goodreads.new
-    best_data = client.book(best_book_id)
+    best_data = nil
+    with_retries do
+      client = Goodreads.new
+      best_data = client.book(best_book_id)
+    end
     @best_book = Book.new(goodreads_data: best_data, prevent_best_book: true)
   end
 
