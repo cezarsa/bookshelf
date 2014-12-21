@@ -48,25 +48,26 @@ html {
     font-weight: bold;
 }
 
-.3d .books .book {
+.three-d .books .book {
     -webkit-perspective: 600px;
     -webkit-perspective-origin: 50% 100px;
 }
 
-.3d .books .book:hover .inner-wrapper {
+.three-d .books .book:hover .inner-wrapper {
     -webkit-transform: translateZ(-140px) rotateY(45deg) rotateX(-10deg) rotateZ(-7deg);
 }
 
-.3d .books .front, .3d .books .side, .3d .books .top {
+.three-d .books .front, .three-d .books .side, .three-d .books .top {
     -webkit-transform-origin: 0 0;
 }
 
-.3d .books .front {
+.three-d .books .front {
     -webkit-transform: rotateY(0deg);
     z-index: 20;
 }
 
-.3d .books .top {
+.three-d .books .top {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
@@ -78,7 +79,8 @@ html {
     z-index: 10;
 }
 
-.3d .books .side {
+.three-d .books .side {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
@@ -93,7 +95,7 @@ html {
     z-index: 10;
 }
 
-.3d .books .inner-wrapper {
+.three-d .books .inner-wrapper {
     -webkit-transform-style: preserve-3d;
     transition: -webkit-transform 400ms ease-in-out;
 }

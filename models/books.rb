@@ -73,6 +73,14 @@ class User
   end
 end
 
+def pipeline_first(*blks)
+  last_val = nil
+  blks.each do |b|
+    last_val = b.call
+    break if last_val
+  end
+  last_val
+end
 
 BOOK_ATTRS = [:goodreads_data, :goodreads_ext_data, :amazon_data]
 MAX_RETRIES = 5
@@ -87,9 +95,6 @@ class Book
     end
     if data[:prevent_best_book]
       @prevent_best_book = true
-    end
-    if title == 'A Sacerdotisa de Avalon'
-      goodreads_data['image_url'] = nil
     end
     update_cover
     update_pub_date
@@ -123,29 +128,29 @@ class Book
   end
 
   def goodreads_ext_data
-    return @goodreads_ext_data unless @goodreads_ext_data.nil?
+    return @goodreads_ext_data if @goodreads_ext_data
     puts "Fetching goodreads_ext_data for #{self.title}"
 
     with_retries do
       client = Goodreads.new
       @goodreads_ext_data = client.book(goodreads_data['id'])
     end
-
-    @goodreads_ext_data = false unless @goodreads_ext_data
     @goodreads_ext_data
   end
 
   def amazon_data
-    return @amazon_data unless @amazon_data.nil?
+    return @amazon_data if @amazon_data
     puts "Fetching amazon_data for #{self.title} - #{self.id}"
 
     item = []
+    source = :asin
     asin_client = ASIN::Client.instance
     with_retries do
       asin = goodreads_data['asin'] || goodreads_data['isbn'] || goodreads_ext_data['asin'] || goodreads_ext_data['isbn']
       item = asin_client.lookup(asin)
     end
     if item.size == 0
+      source = :text
       with_retries do
         keywords = "#{self.title.gsub(/\(.*\)/, '').strip} #{self.author}"
         puts "Trying amazon text search for #{keywords}"
@@ -153,10 +158,8 @@ class Book
       end
     end
     if item.size > 0
-      @amazon_data = item[0]
+      @amazon_data = {data: item[0], source: source}
     end
-
-    @amazon_data = false unless @amazon_data
     @amazon_data
   end
 
@@ -181,12 +184,24 @@ class Book
   def update_cover
     return if self.valid_cover?
 
-    data = self.amazon_data
-    new_cover = data && data['LargeImage'] && data['LargeImage']['URL']
-    unless new_cover
-      bb = self.best_book
-      new_cover = bb.image if bb
-    end
+    amazon_data = self.amazon_data
+    new_cover = pipeline_first(
+      lambda {
+        break unless amazon_data && amazon_data[:source] == :asin
+        data = amazon_data[:data]
+        data && data['LargeImage'] && data['LargeImage']['URL']
+      },
+      lambda {
+        bb = self.best_book
+        bb.image if bb
+      },
+      lambda {
+        break unless amazon_data
+        data = amazon_data[:data]
+        data && data['LargeImage'] && data['LargeImage']['URL']
+      }
+    )
+
     if new_cover
       goodreads_data['image_url'] = new_cover
     end

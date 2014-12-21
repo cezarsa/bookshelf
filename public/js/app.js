@@ -19,8 +19,8 @@
         oldHeight = winHeight;
 
         fixBooksArea(winWidth);
-        // startSideAnimation();
-        // startScrollAnimation(winHeight);
+        startSideAnimation();
+        startScrollAnimation(winHeight);
     };
 
     var fixBooksArea = function(width) {
@@ -144,6 +144,7 @@
         if (ev.keyCode === 27) {
             clearTimeout(scrollTimeout);
             scrollElement.stop(true, false);
+            $('html').addClass('three-d')
         }
     });
 
