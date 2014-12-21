@@ -208,6 +208,7 @@ class Book
   end
 
   def update_pub_date
+    # TODO: switch to book.original_publication_day
     return if goodreads_data['publication_year']
 
     bb = self.best_book
@@ -234,7 +235,11 @@ class Book
   end
 
   def author
-    goodreads_data['authors']['author']['name'].strip
+    authors = goodreads_data['authors']['author']
+    if authors.kind_of? Array
+      authors = authors[0]
+    end
+    authors['name'].strip
   end
 
   def title
