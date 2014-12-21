@@ -187,6 +187,8 @@ class Book
   def update_cover
     return if self.valid_cover?
 
+    puts "Trying to update cover for #{self.title} - #{self.id}"
+
     amazon_data = self.amazon_data
     new_cover = pipeline_first(
       lambda {
@@ -210,18 +212,37 @@ class Book
     end
   end
 
+  def set_pub_data(el1, el2)
+    return unless el2
+    prefix = nil
+    if el2["work"] && el2["work"]["original_publication_year"]
+      el2 = el2["work"]
+      prefix = "original_publication"
+    elsif el2["publication_year"]
+      prefix = "publication"
+    end
+    return if prefix.nil?
+    el1["work"] ||= {}
+    el1["work"]["original_publication_year"],
+    el1["work"]["original_publication_month"],
+    el1["work"]["original_publication_day"] =
+      el2["#{prefix}_year"],
+      el2["#{prefix}_month"],
+      el2["#{prefix}_day"]
+    true
+  end
+
   def update_pub_date
-    # TODO: switch to book.original_publication_day
-    return if goodreads_data['publication_year']
+    return if goodreads_data["work"] && goodreads_data["work"]["original_publication_year"]
+
+    puts "Trying to update pubdate for #{self.title} - #{self.id}"
+
+    if set_pub_data(goodreads_data, goodreads_ext_data)
+      return
+    end
 
     bb = self.best_book
-    if bb && bb.goodreads_data["publication_year"]
-      goodreads_data["publication_year"],
-      goodreads_data["publication_month"],
-      goodreads_data["publication_day"] =
-        bb.goodreads_data["publication_year"],
-        bb.goodreads_data["publication_month"],
-        bb.goodreads_data["publication_day"]
+    if bb && set_pub_data(goodreads_data, bb.goodreads_data)
       return
     end
 
@@ -229,7 +250,12 @@ class Book
     pub_date = data && data['ItemAttributes'] && data['ItemAttributes']['PublicationDate']
 
     if pub_date
-      goodreads_data["publication_year"], goodreads_data["publication_month"], goodreads_data["publication_day"] = pub_date.split('-')
+      parts = pub_date.split('-')
+      set_pub_data(goodreads_data, {
+        'publication_year' => parts[0],
+        'publication_month' => parts[1],
+        'publication_day' => parts[2]
+      })
     end
   end
 
@@ -254,7 +280,11 @@ class Book
   end
 
   def pub_date
-    "%04d-%02d-%02d" % [goodreads_data["publication_year"].to_i, goodreads_data["publication_month"].to_i, goodreads_data["publication_day"].to_i]
+    data = goodreads_data["work"] || {}
+    "%04d-%02d-%02d" % [
+      data["original_publication_year"].to_i,
+      data["original_publication_month"].to_i,
+      data["original_publication_day"].to_i]
   end
 
   def author_last_name
