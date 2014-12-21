@@ -147,15 +147,6 @@
         }
     });
 
-    booksArea.on('mouseenter', '.book', function() {
-        var el = $(this);
-        el.addClass('three-d');
-    });
-    booksArea.on('mouseleave', '.book', function() {
-        var el = $(this);
-        el.removeClass('three-d');
-    });
-
     booksArea.imagesLoaded(update);
     updateLabelColors();
 }(jQuery));

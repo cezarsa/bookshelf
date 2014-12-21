@@ -30,9 +30,10 @@ html {
 
     -webkit-transform-style: preserve-3d;
     transition: -webkit-transform 400ms ease-in-out;
+    pointer-events: none;
 }
 
-.books .book.three-d .inner-wrapper {
+.books .book:hover .inner-wrapper {
     -webkit-transform: translateZ(-140px) rotateY(45deg) rotateX(-10deg) rotateZ(-7deg);
 }
 
