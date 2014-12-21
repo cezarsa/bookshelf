@@ -19,8 +19,8 @@
         oldHeight = winHeight;
 
         fixBooksArea(winWidth);
-        startSideAnimation();
-        startScrollAnimation(winHeight);
+        // startSideAnimation();
+        // startScrollAnimation(winHeight);
     };
 
     var fixBooksArea = function(width) {

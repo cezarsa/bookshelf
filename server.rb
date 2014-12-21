@@ -2,6 +2,22 @@ require 'open-uri'
 require_relative 'models/books'
 
 
+def config_services
+  Mongoid.load!("config/mongoid.yml")
+
+  Goodreads.configure(
+    :api_key => ENV['GOODREADS_KEY'],
+    :api_secret => ENV['GOODREADS_SECRET']
+  )
+
+  ASIN::Configuration.configure do |config|
+    config.secret        = ENV['AMAZON_SECRET']
+    config.key           = ENV['AMAZON_KEY']
+    config.associate_tag = 'your-tag'
+  end
+end
+
+
 class BookShelf < Sinatra::Base
 
   use Rack::Session::Cookie, secret: (ENV['SESSION_SECRET'] || 'some-secret')
@@ -10,24 +26,13 @@ class BookShelf < Sinatra::Base
   end
 
   configure do
-    Mongoid.load!("config/mongoid.yml")
     register Sinatra::StaticAssets
-
-    Goodreads.configure(
-      :api_key => ENV['GOODREADS_KEY'],
-      :api_secret => ENV['GOODREADS_SECRET']
-    )
-
-    ASIN::Configuration.configure do |config|
-      config.secret        = ENV['AMAZON_SECRET']
-      config.key           = ENV['AMAZON_KEY']
-      config.associate_tag = 'your-tag'
-    end
+    config_services
   end
 
   configure :development do
-    Mongoid.logger.level = Logger::DEBUG
-    Moped.logger.level = Logger::DEBUG
+    Mongoid.logger.level = Logger::WARN
+    Moped.logger.level = Logger::WARN
 
     register Sinatra::Reloader
     also_reload './models/*'

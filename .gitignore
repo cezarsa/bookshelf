@@ -6,3 +6,4 @@
 .sass-cache/
 config.yml
 .env
+experiments/

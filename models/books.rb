@@ -45,24 +45,13 @@ class User
   def check_new(existing_books)
     new_books = []
     existing_ids = Set.new(existing_books.map { |book| book.id })
-    all_ids = Set.new
 
     self.each_goodreads_books do |goodreads_data|
-      all_ids << goodreads_data['id']
-      if existing_ids.include?(goodreads_data['id'])
-        book = existing_books.find {|b| b.id == goodreads_data['id'] }
-        next if book.valid_cover?
-      end
+      next if existing_ids.include?(goodreads_data['id'])
       new_books << Book.new(goodreads_data: goodreads_data)
     end
 
-    books = existing_books.select { |book| all_ids.include?(book.id) }
-
-    if books.size != existing_books.size || new_books.size > 0
-      self.save_new_books(books + new_books)
-    end
-
-    books
+    return self.save_new_books(existing_books + new_books)
   end
 
   def update_books!
@@ -72,8 +61,6 @@ class User
     end
 
     self.save_new_books(books)
-
-    books
   end
 
   def save_new_books(books)
@@ -82,6 +69,7 @@ class User
     self.books = books.map(&:to_hash)
     self.last_updated = DateTime.now
     self.upsert
+    books
   end
 end
 
@@ -97,8 +85,24 @@ class Book
     BOOK_ATTRS.each do |var|
       self.instance_variable_set("@#{var}".to_sym, data[var] || data[var.to_s])
     end
+    if data[:prevent_best_book]
+      @prevent_best_book = true
+    end
+    if title == 'A Sacerdotisa de Avalon'
+      goodreads_data['image_url'] = nil
+    end
     update_cover
     update_pub_date
+    clean_data
+  end
+
+  def clean_data
+    if @goodreads_data
+      @goodreads_data.delete('similar_books')
+      @goodreads_data.delete('reviews_widget')
+    end
+    @goodreads_ext_data = nil
+    @amazon_data = nil
   end
 
   def with_retries
@@ -133,20 +137,23 @@ class Book
 
   def amazon_data
     return @amazon_data unless @amazon_data.nil?
-    puts "Fetching amazon_data for #{self.title}"
+    puts "Fetching amazon_data for #{self.title} - #{self.id}"
 
+    item = []
+    asin_client = ASIN::Client.instance
     with_retries do
-      asin_client = ASIN::Client.instance
       asin = goodreads_data['asin'] || goodreads_data['isbn'] || goodreads_ext_data['asin'] || goodreads_ext_data['isbn']
       item = asin_client.lookup(asin)
-      if item.size == 0
+    end
+    if item.size == 0
+      with_retries do
         keywords = "#{self.title.gsub(/\(.*\)/, '').strip} #{self.author}"
         puts "Trying amazon text search for #{keywords}"
         item = asin_client.search_keywords(keywords)
       end
-      if item.size > 0
-        @amazon_data = item[0].raw
-      end
+    end
+    if item.size > 0
+      @amazon_data = item[0]
     end
 
     @amazon_data = false unless @amazon_data
@@ -157,12 +164,29 @@ class Book
     goodreads_data['image_url'] && !(goodreads_data['image_url'] =~ /nocover|nophoto/)
   end
 
+  def best_book
+    return @best_book if @best_book
+    return nil if @prevent_best_book
+    best_book_id = goodreads_data['work'] && goodreads_data['work']['best_book_id']
+    unless best_book_id
+      best_book_id = goodreads_ext_data['work'] && goodreads_ext_data['work']['best_book_id']
+    end
+    puts "Fetching best book from #{self.title}: #{best_book_id}"
+    return nil unless best_book_id
+    client = Goodreads.new
+    best_data = client.book(best_book_id)
+    @best_book = Book.new(goodreads_data: best_data, prevent_best_book: true)
+  end
+
   def update_cover
     return if self.valid_cover?
 
     data = self.amazon_data
     new_cover = data && data['LargeImage'] && data['LargeImage']['URL']
-
+    unless new_cover
+      bb = self.best_book
+      new_cover = bb.image if bb
+    end
     if new_cover
       goodreads_data['image_url'] = new_cover
     end
@@ -170,6 +194,17 @@ class Book
 
   def update_pub_date
     return if goodreads_data['publication_year']
+
+    bb = self.best_book
+    if bb && bb.goodreads_data["publication_year"]
+      goodreads_data["publication_year"],
+      goodreads_data["publication_month"],
+      goodreads_data["publication_day"] =
+        bb.goodreads_data["publication_year"],
+        bb.goodreads_data["publication_month"],
+        bb.goodreads_data["publication_day"]
+      return
+    end
 
     data = self.amazon_data
     pub_date = data && data['ItemAttributes'] && data['ItemAttributes']['PublicationDate']
@@ -192,7 +227,7 @@ class Book
   end
 
   def image
-    goodreads_data['image_url'].gsub(/books\/(.+)m\//, "books/\\1l/")
+    (goodreads_data['image_url'] || '').gsub(/books\/(.+)m\//, "books/\\1l/")
   end
 
   def pub_date
@@ -204,7 +239,9 @@ class Book
   end
 
   def to_hash
-    BOOK_ATTRS.reduce({}) { |res, item| res[item] = send(item); res }
+    {
+      :goodreads_data => @goodreads_data
+    }
   end
 
 end
